@@ -15,7 +15,7 @@ public partial class App : Application
         if (e.Args.Contains("--dump"))
         {
             using var reader = new HardwareReader();
-            File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "sensors.txt"), reader.Dump());
+            File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "sensors.txt"), reader.Dump() + new NetworkReader().Dump());
             Shutdown();
             return;
         }

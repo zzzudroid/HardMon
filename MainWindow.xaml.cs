@@ -19,14 +19,22 @@ public partial class MainWindow : Window
 
     private readonly List<Tile> _tiles = new();
 
-    // Разделитель между группами ЦП и GPU
-    private readonly Border _separator = new() { Background = new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)) };
+    // Разделители между группами ЦП, GPU и сети
+    private readonly List<Border> _separators = new();
 
     private readonly Settings _settings = Settings.Load();
     private readonly CancellationTokenSource _cts = new();
     private HardwareReader? _reader;
+    private readonly NetworkReader _net = new();
 
-    private readonly Tile _cpuLoad, _cpuTemp, _gpuTemp, _gpuLoad, _ram, _vram;
+    private readonly Tile _cpuLoad, _cpuTemp, _gpuTemp, _gpuLoad, _ram, _vram, _inet;
+
+    // Сеть в палитре «Матрицы»: рамка, число и трафик напрямую — ярко-зелёный, доля через VPN — тёмно-зелёный;
+    // значок «VPN» горит неоном того же зелёного, при split-tunnel — жёлтым
+    private static readonly Color DirectColor = Color.FromRgb(0x00, 0xFF, 0x41);
+    private static readonly Color VpnColor = Color.FromRgb(0x00, 0x8F, 0x11);
+    private static readonly Color SplitColor = Color.FromRgb(0xFF, 0xEE, 0x58);
+    private static readonly Color NeonGreen = DirectColor;
 
     public MainWindow()
     {
@@ -35,10 +43,17 @@ public partial class MainWindow : Window
         _cpuLoad = AddTile("Загрузка ЦП", "ЦП", Color.FromRgb(0x11, 0x91, 0xD8));
         _cpuTemp = AddTile("Темп. ЦП", "ЦП°", Color.FromRgb(0x4D, 0xD0, 0xE1));
         _ram = AddTile("Память", "ОЗУ", Color.FromRgb(0xB3, 0x88, 0xFF));
-        Tiles.Children.Add(_separator);
+        AddSeparator();
         _gpuLoad = AddTile("Загрузка GPU", "GPU", Color.FromRgb(0x9C, 0xCC, 0x65));
         _gpuTemp = AddTile("Темп. GPU", "GPU°", Color.FromRgb(0xFF, 0x70, 0x43));
         _vram = AddTile("Видеопамять", "VRAM", Color.FromRgb(0xF0, 0x62, 0x92));
+        AddSeparator();
+        _inet = AddTile("Интернет ↓", "NET", DirectColor);
+        // Шкала по пику за минуту, минимум 1 Мбит/с; вторая серия — доля через VPN
+        _inet.Chart.AutoScale = true;
+        _inet.Chart.Accent2 = VpnColor;
+        _inet.Chart.Badge = "VPN";
+        _inet.Detail.Visibility = Visibility.Collapsed;
 
         Topmost = _settings.Topmost;
         Opacity = _settings.Opacity;
@@ -125,6 +140,13 @@ public partial class MainWindow : Window
         Top = Math.Clamp(top, area.Top, Math.Max(area.Top, area.Bottom - ActualHeight));
     }
 
+    private void AddSeparator()
+    {
+        var sep = new Border { Background = new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)) };
+        Tiles.Children.Add(sep);
+        _separators.Add(sep);
+    }
+
     private Tile AddTile(string title, string shortLabel, Color accent)
     {
         var chart = new Sparkline { Width = 70, Height = 46, Accent = accent, Label = shortLabel, Margin = new Thickness(0, 0, 10, 0) };
@@ -160,9 +182,12 @@ public partial class MainWindow : Window
             t.Row.Margin = horizontal ? new Thickness(3, 0, 3, 0) : new Thickness(0, 4, 0, 4);
         }
         Tiles.Orientation = horizontal ? Orientation.Horizontal : Orientation.Vertical;
-        _separator.Width = horizontal ? 1 : double.NaN;
-        _separator.Height = horizontal ? double.NaN : 1;
-        _separator.Margin = horizontal ? new Thickness(4, 0, 4, 0) : new Thickness(0, 4, 0, 4);
+        foreach (var sep in _separators)
+        {
+            sep.Width = horizontal ? 1 : double.NaN;
+            sep.Height = horizontal ? double.NaN : 1;
+            sep.Margin = horizontal ? new Thickness(4, 0, 4, 0) : new Thickness(0, 4, 0, 4);
+        }
         Root.Padding = compact ? new Thickness(horizontal ? 4 : 6, 6, horizontal ? 4 : 6, 6) : new Thickness(8, 6, 10, 6);
     }
 
@@ -218,15 +243,16 @@ public partial class MainWindow : Window
         while (!ct.IsCancellationRequested)
         {
             Readings r;
-            try { r = _reader.Read(); }
+            NetReadings n;
+            try { r = _reader.Read(); n = _net.Read(); }
             catch { await Task.Delay(1000, ct).ContinueWith(_ => { }); continue; }
 
-            await Dispatcher.InvokeAsync(() => Render(r));
+            await Dispatcher.InvokeAsync(() => Render(r, n));
             await Task.Delay(1000, ct).ContinueWith(_ => { });
         }
     }
 
-    private void Render(Readings r)
+    private void Render(Readings r, NetReadings n)
     {
         // Числа для компактного режима (правый верхний угол графика)
         _cpuLoad.Chart.ValueText = Fmt(r.CpuLoad, "%");
@@ -255,12 +281,42 @@ public partial class MainWindow : Window
         _vram.Value.Text = r.VramLoad is { } vl ? $"{vl:0}%" : "—";
         _vram.Detail.Text = r.VramUsedGb is { } vu ? $"{vu:0.0} / {r.VramTotalGb:0.0} ГБ" : "нет данных";
 
+        RenderNet(n);
+
         _tray.SetTooltip(
             $"ЦП: {Fmt(r.CpuLoad, "%")}, {Fmt(r.CpuTemp, " °C")}\n" +
             $"Память: {r.RamLoad:0}%\n" +
             $"GPU: {Fmt(r.GpuLoad, "%")}, {Fmt(r.GpuTemp, " °C")}\n" +
-            $"Видеопамять: {Fmt(r.VramLoad, "%")}");
+            $"Видеопамять: {Fmt(r.VramLoad, "%")}\n" +
+            $"Интернет: {Speed(n.TotalMbps)}, {VpnText(n.Vpn)}");
     }
+
+    private void RenderNet(NetReadings n)
+    {
+        _inet.Chart.BadgeLit = n.Vpn != VpnState.Off;
+        _inet.Chart.BadgeColor = n.Vpn == VpnState.Split ? SplitColor : NeonGreen;
+        _inet.Chart.ValueText = SpeedShort(n.TotalMbps);
+        _inet.Chart.Push(n.TotalMbps, n.VpnMbps);
+        _inet.Value.Text = Speed(n.TotalMbps);
+        _inet.Row.ToolTip = n.Vpn switch
+        {
+            VpnState.On => $"Интернет через VPN ({n.TunnelName}): VPN {Speed(n.VpnMbps)}, напрямую {Speed(n.DirectMbps)}",
+            VpnState.Split => $"VPN подключён ({n.TunnelName}), но интернет идёт напрямую (split-tunnel): VPN {Speed(n.VpnMbps)}, напрямую {Speed(n.DirectMbps)}",
+            _ => "VPN не подключён — интернет напрямую",
+        };
+    }
+
+    private static string VpnText(VpnState s) => s switch { VpnState.On => "VPN", VpnState.Split => "VPN частично", _ => "напрямую" };
+
+    // Скорость в стиле Диспетчера задач: Кбит/с, Мбит/с, Гбит/с
+    private static string Speed(double mbps) =>
+        mbps >= 1000 ? $"{mbps / 1000:0.0} Гбит/с"
+        : mbps >= 10 ? $"{mbps:0} Мбит/с"
+        : mbps >= 1 ? $"{mbps:0.0} Мбит/с"
+        : $"{mbps * 1000:0} Кбит/с";
+
+    private static string SpeedShort(double mbps) =>
+        mbps >= 1000 ? $"{mbps / 1000:0.0}Г" : mbps >= 1 ? $"{mbps:0}М" : $"{mbps * 1000:0}К";
 
     private static string Fmt(float? v, string unit) => v is { } x ? $"{x:0}{unit}" : "—";
 
