@@ -16,3 +16,5 @@
 - Сохранение настроек (позиция, режимы, прозрачность, видимость) в `%AppData%\HardMon\settings.json`.
 - Ключи `--dump`, `--no-elevate`, `--autostart on|off`.
 - Скрипты `build.ps1` (сборка single-file exe в корень + перезапуск) и `make-icon.ps1`.
+- Дистрибутив: установщик Inno Setup (`installer\HardMon.iss`) с опциями автозапуска и установки PawnIO,
+  портативный zip; self-contained exe без зависимости от .NET; скрипт `make-release.ps1`. Версия 1.0.0.

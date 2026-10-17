@@ -11,7 +11,18 @@
 
 Стек: C# / WPF (.NET 8), датчики — [LibreHardwareMonitorLib](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) 0.9.6, иконка в трее — WinForms `NotifyIcon`.
 
-## Требования
+## Установка
+
+Скачать со страницы [Releases](https://github.com/zzzudroid/HardMon/releases/latest):
+
+- **`HardMon-Setup-x.y.z.exe`** — установщик: Program Files, ярлык в «Пуске», галочки «автозапуск»
+  и «установить PawnIO» (для температуры ЦП). Удаление — через «Приложения» Windows.
+- **`HardMon-x.y.z-portable.zip`** — один exe без установки.
+
+.NET ставить не нужно — runtime встроен в exe. Exe не подписан, поэтому SmartScreen при первом запуске
+может предупредить: «Подробнее» → «Выполнить в любом случае».
+
+## Требования (для разработки)
 
 - Windows 10/11, .NET 8 Desktop Runtime.
 - Для температуры ЦП — права администратора и драйвер **PawnIO**: `winget install namazso.PawnIO`.
@@ -40,6 +51,17 @@
 
 Закрывает запущенный виджет (UAC), публикует single-file exe и кладёт `HardMon.exe` в корень,
 затем перезапускает виджет. Иконка `app.ico` генерируется скриптом `.\make-icon.ps1`.
+
+### Релиз
+
+```powershell
+.\make-release.ps1
+gh release create v1.0.0 release\HardMon-Setup-1.0.0.exe release\HardMon-1.0.0-portable.zip
+```
+
+Версия — `<Version>` в `HardMon.csproj`. Скрипт собирает self-contained exe, скачивает `PawnIO_setup.exe`
+(вкладывается в установщик), собирает установщик Inno Setup (`installer\HardMon.iss`,
+нужен `winget install JRSoftware.InnoSetup`) и портативный zip в папку `release\`.
 
 ## Отладка
 
