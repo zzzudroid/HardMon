@@ -15,6 +15,11 @@
                 <MenuItem x:Name="CompactItem" Header="Компактный режим" IsCheckable="True" Click="OnCompactClick"/>
                 <MenuItem x:Name="HorizontalItem" Header="Горизонтально" IsCheckable="True" Click="OnHorizontalClick"/>
                 <MenuItem x:Name="TopmostItem" Header="Поверх всех окон" IsCheckable="True" Click="OnTopmostClick"/>
+                <MenuItem x:Name="ScaleMenu" Header="Размер">
+                    <MenuItem Header="100%" Tag="1.0" Click="OnScaleClick"/>
+                    <MenuItem Header="150%" Tag="1.5" Click="OnScaleClick"/>
+                    <MenuItem Header="200%" Tag="2.0" Click="OnScaleClick"/>
+                </MenuItem>
                 <MenuItem Header="Прозрачность">
                     <MenuItem Header="100%" Tag="1.0" Click="OnOpacityClick"/>
                     <MenuItem Header="85%" Tag="0.85" Click="OnOpacityClick"/>

@@ -43,6 +43,8 @@ public partial class MainWindow : Window
         Topmost = _settings.Topmost;
         Opacity = _settings.Opacity;
         ApplyLayout(_settings.Compact, _settings.Horizontal);
+        ApplyScale(_settings.Scale);
+        _tray.ScaleRequested += SetScale;
         _tray.ToggleCompact += () => SetLayout(!_settings.Compact, _settings.Horizontal);
         _tray.ToggleHorizontal += () => SetLayout(_settings.Compact, !_settings.Horizontal);
 
@@ -74,7 +76,9 @@ public partial class MainWindow : Window
         CompactItem.IsChecked = _settings.Compact;
         HorizontalItem.IsChecked = _settings.Horizontal;
         HorizontalItem.IsEnabled = _settings.Compact;
-        _tray.SetState(IsVisible, Topmost, autostart, _settings.Compact, _settings.Horizontal);
+        foreach (MenuItem item in ScaleMenu.Items)
+            item.IsChecked = Math.Abs(double.Parse((string)item.Tag, System.Globalization.CultureInfo.InvariantCulture) - _settings.Scale) < 0.01;
+        _tray.SetState(IsVisible, Topmost, autostart, _settings.Compact, _settings.Horizontal, _settings.Scale);
     }
 
     private void SetWidgetVisible(bool visible)
@@ -164,17 +168,36 @@ public partial class MainWindow : Window
 
     private void SetLayout(bool compact, bool horizontal)
     {
-        // Сохраняем правый край окна на месте, чтобы виджет не «уезжал» от края экрана
-        double right = Left + ActualWidth;
-        ApplyLayout(compact, horizontal);
-        UpdateLayout();
-        Left = right - ActualWidth;
+        KeepRightEdge(() => ApplyLayout(compact, horizontal));
         _settings.Compact = compact;
         _settings.Horizontal = horizontal;
-        _settings.Left = Left;
         _settings.Save();
         SyncMenus();
     }
+
+    // Масштаб всего виджета (векторная отрисовка — графики остаются чёткими)
+    private void ApplyScale(double scale) => Root.LayoutTransform = new ScaleTransform(scale, scale);
+
+    private void SetScale(double scale)
+    {
+        KeepRightEdge(() => ApplyScale(scale));
+        _settings.Scale = scale;
+        _settings.Save();
+        SyncMenus();
+    }
+
+    // Сохраняем правый край окна на месте, чтобы виджет не «уезжал» от края экрана
+    private void KeepRightEdge(Action change)
+    {
+        double right = Left + ActualWidth;
+        change();
+        UpdateLayout();
+        Left = right - ActualWidth;
+        _settings.Left = Left;
+    }
+
+    private void OnScaleClick(object sender, RoutedEventArgs e) =>
+        SetScale(double.Parse((string)((MenuItem)sender).Tag, System.Globalization.CultureInfo.InvariantCulture));
 
     private void OnCompactClick(object sender, RoutedEventArgs e) => SetLayout(CompactItem.IsChecked, _settings.Horizontal);
 

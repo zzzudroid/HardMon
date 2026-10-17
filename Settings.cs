@@ -13,6 +13,7 @@ public sealed class Settings
     public bool Hidden { get; set; }
     public bool Compact { get; set; }
     public bool Horizontal { get; set; }
+    public double Scale { get; set; } = 1.0;
 
     private static readonly string FilePath =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HardMon", "settings.json");
