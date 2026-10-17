@@ -56,7 +56,7 @@
 
 ```powershell
 .\make-release.ps1
-gh release create v1.0.0 release\HardMon-Setup-1.0.0.exe release\HardMon-1.0.0-portable.zip
+gh release create vX.Y.Z release\HardMon-Setup-X.Y.Z.exe release\HardMon-X.Y.Z-portable.zip
 ```
 
 Версия — `<Version>` в `HardMon.csproj`. Скрипт собирает self-contained exe, скачивает `PawnIO_setup.exe`
