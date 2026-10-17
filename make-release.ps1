@@ -22,7 +22,7 @@ if (-not (Test-Path $pawn)) {
 }
 
 # 3. Установщик
-$iscc = @("$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe", "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe") |
+$iscc = @("$env:LOCALAPPDATA\Programs\Inno Setup 7\ISCC.exe", "${env:ProgramFiles}\Inno Setup 7\ISCC.exe") |
     Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $iscc) { throw 'Не найден Inno Setup: winget install JRSoftware.InnoSetup' }
 & $iscc /Q "/DAppVersion=$version" installer\HardMon.iss

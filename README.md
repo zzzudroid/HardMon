@@ -60,8 +60,9 @@ gh release create vX.Y.Z release\HardMon-Setup-X.Y.Z.exe release\HardMon-X.Y.Z-p
 ```
 
 Версия — `<Version>` в `HardMon.csproj`. Скрипт собирает self-contained exe, скачивает `PawnIO_setup.exe`
-(вкладывается в установщик), собирает установщик Inno Setup (`installer\HardMon.iss`,
-нужен `winget install JRSoftware.InnoSetup`) и портативный zip в папку `release\`.
+(вкладывается в установщик), собирает установщик Inno Setup (`installer\HardMon.iss`) и портативный zip в папку `release\`.
+Inno Setup — общий для всех проектов: Inno Setup 7 в `%LOCALAPPDATA%\Programs\Inno Setup 7\ISCC.exe`.
+Свою копию в проект не ставить.
 
 ## Отладка
 
