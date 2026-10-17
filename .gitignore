@@ -1,0 +1,8 @@
+bin/
+obj/
+dist/
+*.user
+.vs/
+sensors.txt
+# Собранный exe — артефакт сборки (build.ps1)
+/HardMon.exe
