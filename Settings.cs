@@ -14,6 +14,8 @@ public sealed class Settings
     public bool Compact { get; set; }
     public bool Horizontal { get; set; }
     public double Scale { get; set; } = 1.0;
+    // Режим встроенного видео: дискретной видеокарты нет — плитки GPU скрыты
+    public bool IntegratedGpu { get; set; }
 
     private static readonly string FilePath =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HardMon", "settings.json");

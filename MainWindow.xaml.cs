@@ -58,10 +58,12 @@ public partial class MainWindow : Window
         Topmost = _settings.Topmost;
         Opacity = _settings.Opacity;
         ApplyLayout(_settings.Compact, _settings.Horizontal);
+        ApplyIntegratedGpu(_settings.IntegratedGpu);
         ApplyScale(_settings.Scale);
         _tray.ScaleRequested += SetScale;
         _tray.ToggleCompact += () => SetLayout(!_settings.Compact, _settings.Horizontal);
         _tray.ToggleHorizontal += () => SetLayout(_settings.Compact, !_settings.Horizontal);
+        _tray.ToggleIntegratedGpu += () => SetIntegratedGpu(!_settings.IntegratedGpu);
 
         _tray.ToggleVisibility += () => SetWidgetVisible(!IsVisible);
         _tray.ToggleTopmost += () => SetTopmost(!Topmost);
@@ -92,9 +94,10 @@ public partial class MainWindow : Window
         CompactItem.IsChecked = _settings.Compact;
         HorizontalItem.IsChecked = _settings.Horizontal;
         HorizontalItem.IsEnabled = _settings.Compact;
+        IntegratedGpuItem.IsChecked = _settings.IntegratedGpu;
         foreach (MenuItem item in ScaleMenu.Items)
             item.IsChecked = Math.Abs(double.Parse((string)item.Tag, System.Globalization.CultureInfo.InvariantCulture) - _settings.Scale) < 0.01;
-        _tray.SetState(IsVisible, Topmost, autostart, _settings.Compact, _settings.Horizontal, _settings.Scale);
+        _tray.SetState(IsVisible, Topmost, autostart, _settings.Compact, _settings.Horizontal, _settings.Scale, _settings.IntegratedGpu);
     }
 
     private void SetWidgetVisible(bool visible)
@@ -201,6 +204,23 @@ public partial class MainWindow : Window
         SyncMenus();
     }
 
+    // Режим встроенного видео: скрываем группу GPU (три плитки) и разделитель после неё
+    private void ApplyIntegratedGpu(bool integrated)
+    {
+        var visibility = integrated ? Visibility.Collapsed : Visibility.Visible;
+        foreach (var t in new[] { _gpuLoad, _gpuTemp, _vram })
+            t.Row.Visibility = visibility;
+        _separators[1].Visibility = visibility;
+    }
+
+    private void SetIntegratedGpu(bool integrated)
+    {
+        KeepRightEdge(() => ApplyIntegratedGpu(integrated));
+        _settings.IntegratedGpu = integrated;
+        _settings.Save();
+        SyncMenus();
+    }
+
     // Масштаб всего виджета (векторная отрисовка — графики остаются чёткими)
     private void ApplyScale(double scale) => Root.LayoutTransform = new ScaleTransform(scale, scale);
 
@@ -228,6 +248,8 @@ public partial class MainWindow : Window
     private void OnCompactClick(object sender, RoutedEventArgs e) => SetLayout(CompactItem.IsChecked, _settings.Horizontal);
 
     private void OnHorizontalClick(object sender, RoutedEventArgs e) => SetLayout(_settings.Compact, HorizontalItem.IsChecked);
+
+    private void OnIntegratedGpuClick(object sender, RoutedEventArgs e) => SetIntegratedGpu(IntegratedGpuItem.IsChecked);
 
     private async Task PollLoop(CancellationToken ct)
     {
@@ -287,8 +309,9 @@ public partial class MainWindow : Window
         _tray.SetTooltip(
             $"ЦП: {Fmt(r.CpuLoad, "%")}, {Fmt(r.CpuTemp, " °C")}\n" +
             $"Память: {r.RamLoad:0}%\n" +
-            $"GPU: {Fmt(r.GpuLoad, "%")}, {Fmt(r.GpuTemp, " °C")}\n" +
-            $"Видеопамять: {Fmt(r.VramLoad, "%")}\n" +
+            (_settings.IntegratedGpu ? "" :
+                $"GPU: {Fmt(r.GpuLoad, "%")}, {Fmt(r.GpuTemp, " °C")}\n" +
+                $"Видеопамять: {Fmt(r.VramLoad, "%")}\n") +
             $"Интернет: {Speed(n.TotalMbps)}, {VpnText(n.Vpn)}");
     }
 

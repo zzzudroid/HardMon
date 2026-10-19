@@ -14,6 +14,8 @@
                 <MenuItem Header="Скрыть в трей" Click="OnHideClick"/>
                 <MenuItem x:Name="CompactItem" Header="Компактный режим" IsCheckable="True" Click="OnCompactClick"/>
                 <MenuItem x:Name="HorizontalItem" Header="Горизонтально" IsCheckable="True" Click="OnHorizontalClick"/>
+                <MenuItem x:Name="IntegratedGpuItem" Header="Режим встроенного видео" IsCheckable="True" Click="OnIntegratedGpuClick"
+                          ToolTip="Нет дискретной видеокарты — скрыть плитки GPU и видеопамяти"/>
                 <MenuItem x:Name="TopmostItem" Header="Поверх всех окон" IsCheckable="True" Click="OnTopmostClick"/>
                 <MenuItem x:Name="ScaleMenu" Header="Размер">
                     <MenuItem Header="100%" Tag="1.0" Click="OnScaleClick"/>

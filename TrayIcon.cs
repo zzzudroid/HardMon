@@ -7,11 +7,12 @@ namespace HardMon;
 public sealed class TrayIcon : IDisposable
 {
     private readonly Forms.NotifyIcon _icon;
-    private readonly Forms.ToolStripMenuItem _showItem, _compactItem, _horizontalItem, _topmostItem, _autostartItem;
+    private readonly Forms.ToolStripMenuItem _showItem, _compactItem, _horizontalItem, _integratedGpuItem, _topmostItem, _autostartItem;
 
     public event Action? ToggleVisibility;
     public event Action? ToggleCompact;
     public event Action? ToggleHorizontal;
+    public event Action? ToggleIntegratedGpu;
     public event Action<double>? ScaleRequested;
 
     private readonly (double Scale, Forms.ToolStripMenuItem Item)[] _scaleItems;
@@ -25,6 +26,10 @@ public sealed class TrayIcon : IDisposable
         _showItem = new Forms.ToolStripMenuItem("Показать виджет", null, (_, _) => ToggleVisibility?.Invoke());
         _compactItem = new Forms.ToolStripMenuItem("Компактный режим", null, (_, _) => ToggleCompact?.Invoke());
         _horizontalItem = new Forms.ToolStripMenuItem("Горизонтально", null, (_, _) => ToggleHorizontal?.Invoke());
+        _integratedGpuItem = new Forms.ToolStripMenuItem("Режим встроенного видео", null, (_, _) => ToggleIntegratedGpu?.Invoke())
+        {
+            ToolTipText = "Нет дискретной видеокарты — скрыть плитки GPU и видеопамяти",
+        };
         _topmostItem = new Forms.ToolStripMenuItem("Поверх всех окон", null, (_, _) => ToggleTopmost?.Invoke());
         _autostartItem = new Forms.ToolStripMenuItem("Запускать при входе в Windows", null, (_, _) => ToggleAutostart?.Invoke());
 
@@ -32,6 +37,7 @@ public sealed class TrayIcon : IDisposable
         menu.Items.Add(_showItem);
         menu.Items.Add(_compactItem);
         menu.Items.Add(_horizontalItem);
+        menu.Items.Add(_integratedGpuItem);
 
         var scaleMenu = new Forms.ToolStripMenuItem("Размер");
         _scaleItems = new[] { 1.0, 1.5, 2.0 }
@@ -61,8 +67,9 @@ public sealed class TrayIcon : IDisposable
         };
     }
 
-    public void SetState(bool visible, bool topmost, bool autostart, bool compact, bool horizontal, double scale)
+    public void SetState(bool visible, bool topmost, bool autostart, bool compact, bool horizontal, double scale, bool integratedGpu)
     {
+        _integratedGpuItem.Checked = integratedGpu;
         foreach (var (s, item) in _scaleItems)
             item.Checked = Math.Abs(s - scale) < 0.01;
         _showItem.Text = visible ? "Скрыть виджет" : "Показать виджет";
