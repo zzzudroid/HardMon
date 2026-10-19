@@ -17,6 +17,7 @@ public sealed class TrayIcon : IDisposable
     private readonly (double Scale, Forms.ToolStripMenuItem Item)[] _scaleItems;
     public event Action? ToggleTopmost;
     public event Action? ToggleAutostart;
+    public event Action? About;
     public event Action? Exit;
 
     public TrayIcon()
@@ -42,6 +43,7 @@ public sealed class TrayIcon : IDisposable
         menu.Items.Add(_topmostItem);
         menu.Items.Add(_autostartItem);
         menu.Items.Add(new Forms.ToolStripSeparator());
+        menu.Items.Add(new Forms.ToolStripMenuItem("О программе…", null, (_, _) => About?.Invoke()));
         menu.Items.Add(new Forms.ToolStripMenuItem("Выход", null, (_, _) => Exit?.Invoke()));
 
         using var stream = Application.GetResourceStream(new Uri("pack://application:,,,/app.ico")).Stream;

@@ -28,6 +28,7 @@
                 </MenuItem>
                 <MenuItem x:Name="AutostartItem" Header="Запускать при входе в Windows" IsCheckable="True" Click="OnAutostartClick"/>
                 <Separator/>
+                <MenuItem Header="О программе…" Click="OnAboutClick"/>
                 <MenuItem Header="Выход" Click="OnExitClick"/>
             </ContextMenu>
         </Border.ContextMenu>

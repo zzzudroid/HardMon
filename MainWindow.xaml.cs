@@ -66,6 +66,7 @@ public partial class MainWindow : Window
         _tray.ToggleVisibility += () => SetWidgetVisible(!IsVisible);
         _tray.ToggleTopmost += () => SetTopmost(!Topmost);
         _tray.ToggleAutostart += () => SetAutostart(!Autostart.IsEnabled());
+        _tray.About += AboutWindow.ShowSingle;
         _tray.Exit += Close;
         SyncMenus();
 
@@ -355,6 +356,8 @@ public partial class MainWindow : Window
     }
 
     private void OnAutostartClick(object sender, RoutedEventArgs e) => SetAutostart(AutostartItem.IsChecked);
+
+    private void OnAboutClick(object sender, RoutedEventArgs e) => AboutWindow.ShowSingle();
 
     private void OnExitClick(object sender, RoutedEventArgs e) => Close();
 
