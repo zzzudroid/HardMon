@@ -7,4 +7,3 @@ sensors.txt
 # Собранный exe — артефакт сборки (build.ps1)
 /HardMon.exe
 release/
-installer/PawnIO_setup.exe

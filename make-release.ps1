@@ -1,4 +1,4 @@
-﻿# Сборка релиза: self-contained exe (без зависимости от .NET), установщик Inno Setup и портативный zip.
+﻿# Сборка релиза: self-contained exe (без зависимости от .NET), упакованный в портативный zip. Установщика нет.
 # Результат — в папке release\. Версия берётся из HardMon.csproj (<Version>).
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
@@ -15,21 +15,9 @@ dotnet publish -c Release -r win-x64 --self-contained true -o release\app `
     -p:DebugType=none -v q
 if (-not $?) { throw 'Сборка не удалась' }
 
-# 2. Установщик PawnIO для включения в инсталлятор (скачивается один раз)
-$pawn = 'installer\PawnIO_setup.exe'
-if (-not (Test-Path $pawn)) {
-    Invoke-WebRequest 'https://github.com/namazso/PawnIO.Setup/releases/download/2.2.0/PawnIO_setup.exe' -OutFile $pawn
-}
-
-# 3. Установщик
-$iscc = @("$env:LOCALAPPDATA\Programs\Inno Setup 7\ISCC.exe", "${env:ProgramFiles}\Inno Setup 7\ISCC.exe") |
-    Where-Object { Test-Path $_ } | Select-Object -First 1
-if (-not $iscc) { throw 'Не найден Inno Setup: winget install JRSoftware.InnoSetup' }
-& $iscc /Q "/DAppVersion=$version" installer\HardMon.iss
-if ($LASTEXITCODE -ne 0) { throw 'Сборка установщика не удалась' }
-
-# 4. Портативный zip
+# 2. Портативный zip: exe + краткая инструкция
 $zip = "release\HardMon-$version-portable.zip"
-Compress-Archive -Path release\app\HardMon.exe, installer\README.txt -DestinationPath $zip
+Compress-Archive -Path release\app\HardMon.exe, portable\README.txt -DestinationPath $zip
+Remove-Item release\app -Recurse -Force
 
 Get-ChildItem release -File | Select-Object Name, @{ n = 'МБ'; e = { [math]::Round($_.Length / 1MB, 1) } } | Format-Table -AutoSize
