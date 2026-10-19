@@ -45,10 +45,11 @@ public sealed partial class NetworkReader
         string? tunnelName = null;
         var tunnelIndexes = new HashSet<uint>();
         var seen = new HashSet<ulong>();
+        uint? best = GetBestInterface(ProbeAddress, out uint bestIndex) == 0 ? bestIndex : null;
 
         foreach (var row in rows)
         {
-            var kind = Classify(row);
+            var kind = Classify(row, best);
             if (kind == Kind.Other)
                 continue;
 
@@ -81,7 +82,7 @@ public sealed partial class NetworkReader
             _prev.Remove(luid);
 
         var state = tunnelIndexes.Count == 0 ? VpnState.Off
-            : GetBestInterface(ProbeAddress, out uint best) == 0 && tunnelIndexes.Contains(best) ? VpnState.On
+            : best is uint b && tunnelIndexes.Contains(b) ? VpnState.On
             : VpnState.Split;
 
         if (first || seconds <= 0)
@@ -95,10 +96,14 @@ public sealed partial class NetworkReader
 
     private enum Kind { Other, Physical, Tunnel }
 
-    // Физический — реальная сетевая карта (без фильтров NDIS и виртуальных Hyper-V/WSL/WAN Miniport)
-    private static Kind Classify(in MIB_IF_ROW2 row)
+    // Физический — реальная сетевая карта (без фильтров NDIS и виртуальных Hyper-V/WSL/WAN Miniport).
+    // Туннель — известный VPN-адаптер по имени, либо любой виртуальный адаптер (IF_TYPE_PROP_VIRTUAL: TAP, Wintun —
+    // так выглядят sing-box/Clash/v2rayN в режиме TUN, WireSock и пр.), через который идёт маршрут в интернет.
+    // Безымянные виртуальные адаптеры без маршрута (Tailscale, ZeroTier) не считаем, чтобы не гореть «VPN мимо»
+    private static Kind Classify(in MIB_IF_ROW2 row, uint? bestIndex)
     {
         const int ifOperStatusUp = 1;
+        const uint ifTypePropVirtual = 53;
         if (row.OperStatus != ifOperStatusUp)
             return Kind.Other;
         bool hardware = (row.InterfaceAndOperStatusFlags & 1) != 0;
@@ -106,6 +111,8 @@ public sealed partial class NetworkReader
         if (filter)
             return Kind.Other;
         if (TunnelPattern().IsMatch(row.Description))
+            return Kind.Tunnel;
+        if (!hardware && row.Type == ifTypePropVirtual && row.InterfaceIndex == bestIndex)
             return Kind.Tunnel;
         return hardware ? Kind.Physical : Kind.Other;
     }
@@ -130,21 +137,36 @@ public sealed partial class NetworkReader
         return list;
     }
 
-    // Текстовый дамп сетевых интерфейсов и скоростей за 1 с — для отладки (--dump)
+    // Текстовый дамп сетевых интерфейсов и скоростей за 1 с — для отладки (--dump).
+    // Пишет все интерфейсы, включая отброшенные как Other: по нему видно, почему туннель не распознан
     public string Dump()
     {
         var sb = new StringBuilder();
         sb.AppendLine($"[Network] MIB_IF_ROW2 size = {Marshal.SizeOf<MIB_IF_ROW2>()} (ожидается 1352)");
+        uint? best = GetBestInterface(ProbeAddress, out uint bestIndex) == 0 ? bestIndex : null;
+        sb.AppendLine("  kind     #idx type tun media phys flags oper in-octets        description | alias");
         foreach (var row in ReadTable())
         {
-            var kind = Classify(row);
-            if (kind != Kind.Other)
-                sb.AppendLine($"  {kind,-8} #{row.InterfaceIndex,-3} {row.Description,-60} in={row.InOctets} pkts={row.InUcastPkts + row.InNUcastPkts}");
+            var kind = Classify(row, best);
+            sb.AppendLine($"  {kind,-8} #{row.InterfaceIndex,-3} {row.Type,4} {row.TunnelType,3} {row.MediaType,5} {row.PhysicalMediumType,4} " +
+                          $"0x{row.InterfaceAndOperStatusFlags:X2}  {row.OperStatus,4} {row.InOctets,-16} {row.Description} | {row.Alias}");
         }
+        sb.AppendLine(best is uint b ? $"Маршрут до 1.1.1.1: интерфейс #{b}" : "Маршрут до 1.1.1.1: не определён");
+        sb.AppendLine($"Системный прокси: {SystemProxy()}");
         Read();
         Thread.Sleep(1000);
         sb.AppendLine($"Network: {Read()}");
         return sb.ToString();
+    }
+
+    // Прокси из настроек Windows: VPN-клиенты в режиме прокси (Shadowsocks без TUN) своего адаптера не создают
+    private static string SystemProxy()
+    {
+        using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Internet Settings");
+        if (key is null)
+            return "нет данных";
+        bool enabled = key.GetValue("ProxyEnable") is int on && on != 0;
+        return enabled ? $"включён, {key.GetValue("ProxyServer")}" : $"выключен; PAC: {key.GetValue("AutoConfigURL") ?? "нет"}";
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
