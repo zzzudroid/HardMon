@@ -15,5 +15,5 @@ Copy-Item dist\HardMon.exe .\HardMon.exe -Force
 Remove-Item dist -Recurse -Force
 Write-Host 'Готово: HardMon.exe в корне проекта'
 
-schtasks /Query /TN HardMon *> $null
-if ($LASTEXITCODE -eq 0) { schtasks /Run /TN HardMon | Out-Null } else { Start-Process .\HardMon.exe }
+# Get-ScheduledTask вместо schtasks /Query: при Stop ошибка нативной команды «задача не найдена» роняет скрипт
+if (Get-ScheduledTask -TaskName HardMon -ErrorAction SilentlyContinue) { Start-ScheduledTask -TaskName HardMon } else { Start-Process .\HardMon.exe }
