@@ -5,3 +5,8 @@
 - **Inno Setup** — только общий Inno Setup 7: `%LOCALAPPDATA%\Programs\Inno Setup 7\ISCC.exe`.
   Его ищет `make-release.ps1`. Свою копию в проект не ставить, Inno Setup 6 с машины удалён.
 - Реестр всех проектов и общих инструментов — `C:\Projects\РЕЕСТР ПРОЕКТОВ.md`.
+
+## GitHub — только код (решение от 19.10.2026)
+
+- Exe, установщики и zip на GitHub не загружать: ни в репозиторий, ни вложениями к Releases.
+  `make-release.ps1` собирает их локально в `release\`; релиз на GitHub — только тег `vX.Y.Z`.

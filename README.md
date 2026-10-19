@@ -30,7 +30,8 @@ WireGuard/AmneziaWG, Wintun, а также любой виртуальный а�
 
 ## Установка
 
-Скачать со страницы [Releases](https://github.com/zzzudroid/HardMon/releases/latest):
+На GitHub лежит только исходный код — готовые exe и установщики туда не выкладываются.
+Установщик и портативная версия собираются локально скриптом `.\make-release.ps1` (см. [Релиз](#релиз)):
 
 - **`HardMon-Setup-x.y.z.exe`** — установщик: Program Files, ярлык в «Пуске», галочки «автозапуск»
   и «установить PawnIO» (для температуры ЦП). Удаление — через «Приложения» Windows.
@@ -73,9 +74,10 @@ WireGuard/AmneziaWG, Wintun, а также любой виртуальный а�
 
 ```powershell
 .\make-release.ps1
-gh release create vX.Y.Z release\HardMon-Setup-X.Y.Z.exe release\HardMon-X.Y.Z-portable.zip
+git tag vX.Y.Z; git push origin vX.Y.Z
 ```
 
+Файлы из `release\` остаются локально (папка в `.gitignore`) и на GitHub не загружаются — передавать их напрямую.
 Версия — `<Version>` в `HardMon.csproj`. Скрипт собирает self-contained exe, скачивает `PawnIO_setup.exe`
 (вкладывается в установщик), собирает установщик Inno Setup (`installer\HardMon.iss`) и портативный zip в папку `release\`.
 Inno Setup — общий для всех проектов: Inno Setup 7 в `%LOCALAPPDATA%\Programs\Inno Setup 7\ISCC.exe`.
